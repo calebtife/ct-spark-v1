@@ -72,19 +72,19 @@ const Navbar = () => {
 
             <ul className="hidden sm:flex justify-between gap-5 text-md">
               <li>
-                <Link to="/" className="nav-link">Home</Link>
+                <Link to="/" className="nav-link text-white">Home</Link>
               </li>
               <li>
-                <Link to="#about" className="nav-link">About</Link>
+                <Link to="#about" className="nav-link text-white">About</Link>
               </li>
               <li>
-                <Link to="#services" className="nav-link">Services</Link>
+                <Link to="#services" className="nav-link text-white">Services</Link>
               </li>
               <li>
-                <Link to="#reviews" className="nav-link">Reviews</Link>
+                <Link to="#reviews" className="nav-link text-white">Reviews</Link>
               </li>
               <li>
-                <Link to="/support" className="nav-link">Support</Link>
+                <Link to="/support" className="nav-link text-white">Support</Link>
               </li>
             </ul>
 
@@ -111,4 +111,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

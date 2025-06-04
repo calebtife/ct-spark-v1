@@ -10,7 +10,7 @@
 
 @layer components {
   .nav-link {
-    @apply relative text-white hover:text-[#F7E16C] transition-colors duration-300;
+    @apply relative hover:text-[#F7E16C] transition-colors duration-300;
   }
   
   .nav-link::after {
