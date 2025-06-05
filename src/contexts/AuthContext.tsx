@@ -3,6 +3,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import type { User } from '../types/auth';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -60,9 +61,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     isAdmin
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner size="large" />
+      </div>
+    );
+  }
+
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }; 

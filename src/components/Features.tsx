@@ -2,8 +2,8 @@ const Features = () => {
   const features = [
     {
       icon: 'bx-transfer',
-      title: 'Fast Transactions',
-      description: 'Experience lightning-fast transactions with our advanced payment processing system.'
+      title: 'Fast Internet',
+      description: 'Experience lightning-fast Internet with our advanced internet plans.'
     },
     {
       icon: 'bx-shield-quarter',

@@ -28,13 +28,13 @@ const Navbar = () => {
               <Link to="/" className="hover:text-blue-500 transition-colors">Home</Link>
             </li>
             <li className="mb-4">
-              <Link to="#about" className="hover:text-blue-500 transition-colors">About</Link>
+              <Link to="/about" className="hover:text-blue-500 transition-colors">About</Link>
             </li>
             <li className="mb-4">
-              <Link to="#services" className="hover:text-blue-500 transition-colors">Services</Link>
+              <Link to="/services" className="hover:text-blue-500 transition-colors">Services</Link>
             </li>
             <li className="mb-4">
-              <Link to="#reviews" className="hover:text-blue-500 transition-colors">Reviews</Link>
+              <Link to="/reviews" className="hover:text-blue-500 transition-colors">Reviews</Link>
             </li>
             <li className="mb-4">
               <Link to="/support" className="hover:text-blue-500 transition-colors">Support</Link>

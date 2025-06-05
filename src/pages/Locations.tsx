@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import Layout from '../components/Layout';
-import { Location } from '../types';
+import type { Location } from '../types';
 
 const Locations = () => {
   const { currentUser } = useAuth();

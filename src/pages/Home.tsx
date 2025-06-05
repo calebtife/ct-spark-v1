@@ -1,17 +1,16 @@
-import Navbar from '../components/Navbar';
+import HomeLayout from '../components/layouts/HomeLayout';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
-import Footer from '../components/Footer';
+import ReviewSection from '../components/ReviewSection';
 
 const Home = () => {
-  return (
-    <div className="min-h-screen bg-[url('/assets/spacejpeg.jpg')] bg-cover bg-center bg-no-repeat">
-      <Navbar />
-      <Hero />
-      <Features />
-      <Footer />
-    </div>
-  );
+    return (
+        <HomeLayout>
+            <Hero />
+            <Features />
+            <ReviewSection />
+        </HomeLayout>
+    );
 };
 
 export default Home; 
