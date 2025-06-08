@@ -10,15 +10,20 @@
 
 @layer components {
   .nav-link {
-    @apply relative hover:text-[#F7E16C] transition-colors duration-300;
+    @apply relative text-gray-500 hover:text-blue-500 transition-colors duration-300;
   }
   
   .nav-link::after {
-    @apply content-[''] absolute bottom-0 left-0 w-0 h-0.5 bg-[#F7E16C] transition-all duration-300;
+    @apply content-[''] absolute bottom-0 left-0 w-0 h-0.5 bg-blue-500 transition-all duration-300;
   }
   
-  .nav-link:hover::after {
+  .nav-link:hover::after,
+  .nav-link.active::after {
     @apply w-full;
+  }
+
+  .nav-link.active {
+    @apply text-blue-500;
   }
 }
 

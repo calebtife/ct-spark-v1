@@ -24,8 +24,8 @@ const socialLinks: SocialLink[] = [
 
 const quickLinks: QuickLink[] = [
   { to: '/', text: 'Home' },
-  { to: '/#about', text: 'About Us' },
-  { to: '/#services', text: 'Our Services' },
+  { to: '/about', text: 'About Us' },
+  { to: '/plans', text: 'Data Plans' },
   { to: '/login', text: 'Sign In' },
 ];
 

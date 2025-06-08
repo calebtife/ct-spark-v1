@@ -5,8 +5,12 @@ import Footer from '../Footer';
 import Navigation from '../Navigation';
 import ErrorBoundary from '../ErrorBoundary';
 import LoadingSpinner from '../LoadingSpinner';
+import WhatsAppButton from '../WhatsAppButton';
 import { Link } from 'react-router-dom';
 import { HiOutlineMenuAlt3, HiOutlineX } from "react-icons/hi";
+import { navigation } from '../../config/navigation';
+import { useAuth } from '../../contexts/AuthContext';
+import { auth } from '../../services/firebase';
 
 interface HomeLayoutProps {
     children: ReactNode;
@@ -25,9 +29,19 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+    const { currentUser } = useAuth();
 
     const toggleMobileMenu = () => {
         setIsMobileMenuOpen(!isMobileMenuOpen);
+    };
+
+    const handleLogout = async () => {
+        try {
+            await auth.signOut();
+            toggleMobileMenu();
+        } catch (error) {
+            console.error('Error signing out:', error);
+        }
     };
 
     // Handle click outside
@@ -49,14 +63,6 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [isMobileMenuOpen]);
-
-    // Navigation items from Header component
-    const navItems = [
-        { label: 'Home', href: '/' },
-        { label: 'About', href: '/about' },
-        { label: 'Services', href: '/services' },
-        { label: 'Contact', href: '/contact' }
-    ];
 
     return (
         <ErrorBoundary>
@@ -115,7 +121,7 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({
                     <div className="px-4 py-6">
                         {/* Navigation Links */}
                         <nav className="space-y-4 mb-6">
-                            {navItems.map((item) => (
+                            {navigation.map((item) => (
                                 <Link
                                     key={item.href}
                                     to={item.href}
@@ -128,26 +134,46 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({
                         </nav>
 
                         {/* Auth Buttons */}
-                        <div className="flex flex-col space-y-4">
-                            <Link
-                                to="/signin"
-                                className="text-gray-700 hover:text-blue-500 text-lg font-medium"
-                                onClick={toggleMobileMenu}
-                            >
-                                Sign In
-                            </Link>
-                            <Link
-                                to="/get-started"
-                                className="px-5 py-3 bg-[#060640] rounded-full text-white hover:bg-blue-700 transition-colors text-center"
-                                onClick={toggleMobileMenu}
-                            >
-                                Get Started
-                            </Link>
+                        <div className="flex flex-col space-y-4 mt-6 pt-6 border-t border-gray-200">
+                            {currentUser ? (
+                                <>
+                                    <Link
+                                        to="/dashboard"
+                                        className="text-gray-700 hover:text-blue-500 text-lg font-medium"
+                                        onClick={toggleMobileMenu}
+                                    >
+                                        {currentUser.username}
+                                    </Link>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="px-5 py-3 bg-red-600 rounded-full text-white hover:bg-red-700 transition-colors text-center"
+                                    >
+                                        Logout
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link
+                                        to="/login"
+                                        className="text-gray-700 hover:text-blue-500 text-lg font-medium"
+                                        onClick={toggleMobileMenu}
+                                    >
+                                        Sign In
+                                    </Link>
+                                    <Link
+                                        to="/login?register=true"
+                                        className="px-5 py-3 bg-[#060640] rounded-full text-white hover:bg-blue-700 transition-colors text-center"
+                                        onClick={toggleMobileMenu}
+                                    >
+                                        Get Started
+                                    </Link>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                <main className="flex-grow w-full mx-auto  relative">
+                <main className="flex-grow w-full mx-auto relative">
                     {isNavigating || isLoading ? (
                         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
                             <LoadingSpinner size="large" />
@@ -157,6 +183,12 @@ const HomeLayout: React.FC<HomeLayoutProps> = ({
                 </main>
 
                 <Footer />
+                
+                {/* WhatsApp Support Button */}
+                <WhatsAppButton 
+                    phoneNumber="1234567890" // Replace with your actual WhatsApp number
+                    message="Hello! I need assistance with CT SPARK."
+                />
             </div>
         </ErrorBoundary>
     );

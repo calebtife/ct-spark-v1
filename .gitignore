@@ -22,3 +22,36 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel
+
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
+
+# Firebase
+*-firebase-adminsdk-*.json
+firebase-debug.log
+firebase-debug.*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

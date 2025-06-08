@@ -31,13 +31,13 @@ const Navbar = () => {
               <Link to="/about" className="hover:text-blue-500 transition-colors">About</Link>
             </li>
             <li className="mb-4">
-              <Link to="/services" className="hover:text-blue-500 transition-colors">Services</Link>
+              <Link to="/services" className="hover:text-blue-500 transition-colors">Packages</Link>
             </li>
             <li className="mb-4">
               <Link to="/reviews" className="hover:text-blue-500 transition-colors">Reviews</Link>
             </li>
             <li className="mb-4">
-              <Link to="/support" className="hover:text-blue-500 transition-colors">Support</Link>
+              <Link to="/contact-us" className="hover:text-blue-500 transition-colors">Contact Us</Link>
             </li>
           </ul>
 
@@ -78,13 +78,13 @@ const Navbar = () => {
                 <Link to="#about" className="nav-link text-white">About</Link>
               </li>
               <li>
-                <Link to="#services" className="nav-link text-white">Services</Link>
+                <Link to="#services" className="nav-link text-white">Packages</Link>
               </li>
               <li>
                 <Link to="#reviews" className="nav-link text-white">Reviews</Link>
               </li>
               <li>
-                <Link to="/support" className="nav-link text-white">Support</Link>
+                <Link to="/contact-us" className="nav-link text-white">Contact Us</Link>
               </li>
             </ul>
 

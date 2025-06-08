@@ -7,8 +7,8 @@ export type NavItem = {
 // Export the navigation array
 export const navigation: NavItem[] = [
     { label: "Home", href: "/" },
-    { label: "About", href: "#about" },
-    { label: "Services", href: "#services" },
-    { label: "Reviews", href: "#reviews" },
-    { label: "Support", href: "/support" }
+    { label: "About", href: "/about" },
+    { label: " Data Plans", href: "/plans" },
+    // { label: "Reviews", href: "#reviews" },
+    { label: "Contact", href: "/contact-us" }
 ]; 

@@ -10,38 +10,38 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   imageUrl
 }) => {
   return (
-    <div className="bg-white shadow-lg rounded-lg p-6 w-[350px] transform transition-transform hover:scale-105">
+    <div className="bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl p-8 w-full max-w-[350px] mx-auto transform transition-all duration-300 hover:scale-[1.02] hover:bg-white/15">
       {/* Star Rating */}
-      <div className="flex justify-center mb-4 text-orange-400">
+      <div className="flex justify-center mb-6 text-[#F19645]">
         {[...Array(rating)].map((_, index) => (
-          <i key={index} className="bx bxs-star bx-sm"></i>
+          <i key={index} className="bx bxs-star text-xl"></i>
         ))}
       </div>
 
-      {/* Review Title */}
-      <h2 className="text-center font-bold text-lg mb-4">{title}</h2>
-
       {/* Review Text */}
-      <p className="text-center text-gray-600 mb-6">
-        {review}
+      <p className="text-center text-white/90 mb-8 text-lg leading-relaxed">
+        "{review}"
       </p>
 
-      {/* Image */}
-      <div className="flex justify-center mb-4">
-        {imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt={name} 
-            className="w-16 h-16 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-16 h-16 bg-gray-300 rounded-full"></div>
-        )}
-      </div>
+      {/* Image and Reviewer Info */}
+      <div className="flex flex-col items-center">
+        <div className="relative mb-4">
+          {imageUrl ? (
+            <img 
+              src={imageUrl} 
+              alt={name} 
+              className="w-20 h-20 rounded-full object-cover border-2 border-[#F19645]"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#F19645] to-[#FF6B6B] flex items-center justify-center text-white text-2xl font-bold">
+              {name.charAt(0)}
+            </div>
+          )}
+        </div>
 
-      {/* Reviewer Info */}
-      <h3 className="text-center font-bold text-md">{name}</h3>
-      <p className="text-center text-sm text-gray-500">{role}</p>
+        <h3 className="text-center font-bold text-xl text-white mb-1">{name}</h3>
+        <p className="text-center text-sm text-white/70">{role}</p>
+      </div>
     </div>
   );
 };

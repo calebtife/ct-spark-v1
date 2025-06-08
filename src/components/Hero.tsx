@@ -3,9 +3,9 @@ import Phone from '../assets/images/mockup.png'
 
 const Hero = () => {
   return (
-    <section className="relative min-h-[calc(100vh-64px)] mt-16 flex items-center justify-center py-12 sm:py-16 px-4 sm:px-6 overflow-hidden">
+    <section className="relative min-h-[calc(100vh-64px)]  mt-16 md:mt-0 flex items-center justify-center py-12 sm:py-16 px-4 sm:px-6 overflow-hidden">
       {/* Background Overlay */}
-      <div className="absolute inset-0 bg-black/50 z-0"></div>
+      <div className="absolute inset-0 bg-[#060640] z-0"></div>
 
       <div className="container mx-auto flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-10 relative z-10">
         <div className="text-center lg:text-left w-full lg:w-1/2">

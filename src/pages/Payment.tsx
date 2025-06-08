@@ -1,28 +1,66 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import Layout from '../components/Layout';
-import { useNavigate } from 'react-router-dom';
+import DashboardLayout from '../components/DashboardLayout';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { TbCurrencyNaira } from "react-icons/tb";
+import { HiArrowLeft, HiLockClosed, HiCreditCard } from "react-icons/hi";
+import { toast } from 'react-hot-toast';
+
+interface Plan {
+  id: string;
+  title: string;
+  data: string;
+  price: number;
+  validity: string;
+  device: string;
+}
 
 interface PaymentFormData {
-  recipientId: string;
-  amount: string;
-  note: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
 }
+
+type PaymentMethod = 'balance' | 'paystack';
 
 const Payment = () => {
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('paystack');
+  const [voucherCode, setVoucherCode] = useState<string | null>(null);
   const [formData, setFormData] = useState<PaymentFormData>({
-    recipientId: '',
-    amount: '',
-    note: ''
+    fullName: '',
+    email: currentUser?.email || '',
+    phoneNumber: ''
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  useEffect(() => {
+    // Get selected plan from location state
+    const plan = location.state?.plan;
+    if (!plan) {
+      toast.error('No plan selected');
+      navigate('/dashboard');
+      return;
+    }
+
+    // Check if plan has available vouchers
+    checkVoucherAvailability(plan.title).then(hasVouchers => {
+      if (!hasVouchers) {
+        toast.error('No vouchers available for this plan');
+        navigate('/dashboard');
+      } else {
+        setSelectedPlan(plan);
+      }
+    });
+  }, [location.state, navigate]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -30,83 +68,228 @@ const Payment = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const checkVoucherAvailability = async (planName: string): Promise<boolean> => {
+    if (!currentUser) return false;
+
+    try {
+      const userDocRef = doc(db, 'users', currentUser.uid);
+      const userDoc = await getDoc(userDocRef);
+      const userData = userDoc.data();
+      const locationId = userData?.locationId;
+
+      // Normalize plan name to match Firestore document names
+      const firestoreNames: { [key: string]: string } = {
+        'Day King': 'day king',
+        'Intermediate': 'Intermediate',
+        'ACTIVE': 'active'
+      };
+
+      const normalizedPlanName = firestoreNames[planName] || 
+        planName.toLowerCase().trim().replace(/\s+/g, '_');
+      
+      const planRef = doc(db, 'vouchers', normalizedPlanName);
+      
+      for (let i = 1; i <= 20; i++) {
+        const voucherQuery = query(
+          collection(planRef, `voucher${i}`),
+          where('used', '==', false),
+          where('locationId', '==', locationId)
+        );
+        
+        const voucherDoc = await getDocs(voucherQuery);
+        if (!voucherDoc.empty) {
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking voucher availability:', error);
+      return false;
+    }
+  };
+
+  const assignVoucher = async (planName: string): Promise<string> => {
+    if (!currentUser) throw new Error('User not authenticated');
+
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+    const userData = userDoc.data();
+    const locationId = userData?.locationId;
+
+    // Normalize plan name to match Firestore document names
+    const firestoreNames: { [key: string]: string } = {
+      'Day King': 'day king',
+      'Intermediate': 'Intermediate',
+      'ACTIVE': 'active'
+    };
+
+    const normalizedPlanName = firestoreNames[planName] || 
+      planName.toLowerCase().trim().replace(/\s+/g, '_');
+    
+    const planRef = doc(db, 'vouchers', normalizedPlanName);
+    
+    for (let i = 1; i <= 20; i++) {
+      const voucherQuery = query(
+        collection(planRef, `voucher${i}`),
+        where('used', '==', false),
+        where('locationId', '==', locationId)
+      );
+      
+      const voucherDoc = await getDocs(voucherQuery);
+      if (!voucherDoc.empty) {
+        const voucher = voucherDoc.docs[0];
+        const voucherCode = voucher.data().code;
+
+        await writeBatch(db).update(voucher.ref, {
+          used: true,
+          assignedTo: currentUser.uid,
+          assignedAt: serverTimestamp()
+        }).commit();
+
+        return voucherCode;
+      }
+    }
+    
+    throw new Error(`No available vouchers for ${planName} at your location`);
+  };
+
+  const handlePaystackPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) return;
+    if (!selectedPlan || !currentUser) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error('Please enter a valid amount');
-      }
+      const handler = window.PaystackPop.setup({
+        key: process.env.REACT_APP_PAYSTACK_PUBLIC_KEY,
+        email: formData.email,
+        amount: selectedPlan.price * 100, // Convert to kobo
+        currency: 'NGN',
+        ref: `CT_SPARK_${Math.floor(Math.random() * 1000000) + 1}`,
+        metadata: {
+          custom_fields: [
+            {
+              display_name: 'User ID',
+              variable_name: 'user_id',
+              value: currentUser.uid
+            },
+            {
+              display_name: 'Plan',
+              variable_name: 'plan',
+              value: selectedPlan.title
+            }
+          ]
+        },
+        callback: async (response: any) => {
+          try {
+            const voucherCode = await assignVoucher(selectedPlan.title);
+            
+            // Create transaction record
+            await writeBatch(db)
+              .set(doc(collection(db, 'transactions')), {
+                userId: currentUser.uid,
+                plan: selectedPlan.title,
+                amount: selectedPlan.price,
+                type: 'direct_payment',
+                status: 'completed',
+                paymentMethod: 'paystack',
+                reference: response.reference,
+                voucherCode,
+                timestamp: serverTimestamp()
+              })
+              .commit();
 
-      if (amount > currentUser.balance) {
-        throw new Error('Insufficient balance');
-      }
-
-      // Check if recipient exists
-      const recipientRef = collection(db, 'users');
-      const q = query(recipientRef, where('uid', '==', formData.recipientId));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        throw new Error('Recipient not found');
-      }
-
-      const recipient = querySnapshot.docs[0].data();
-
-      // Create transaction
-      const transactionData = {
-        userId: currentUser.uid,
-        recipientId: formData.recipientId,
-        amount: amount,
-        type: 'withdrawal',
-        status: 'completed',
-        note: formData.note,
-        createdAt: serverTimestamp(),
-        locationId: currentUser.locationId
-      };
-
-      // Start a batch write
-      const batch = db.batch();
-
-      // Add transaction
-      const transactionRef = doc(collection(db, 'transactions'));
-      batch.set(transactionRef, transactionData);
-
-      // Update sender's balance
-      const senderRef = doc(db, 'users', currentUser.uid);
-      batch.update(senderRef, {
-        balance: currentUser.balance - amount
+            setVoucherCode(voucherCode);
+            toast.success('Payment successful! Your voucher code has been generated.');
+          } catch (error: any) {
+            toast.error(error.message);
+          }
+        },
+        onClose: () => {
+          setLoading(false);
+          toast.error('Payment cancelled');
+        }
       });
 
-      // Update recipient's balance
-      const recipientDocRef = doc(db, 'users', formData.recipientId);
-      batch.update(recipientDocRef, {
-        balance: recipient.balance + amount
-      });
-
-      // Commit the batch
-      await batch.commit();
-
-      navigate('/dashboard');
+      handler.openIframe();
     } catch (error: any) {
       setError(error.message);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleBalancePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPlan || !currentUser) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!currentUser.balance || currentUser.balance < selectedPlan.price) {
+        throw new Error('Insufficient balance');
+      }
+
+      const voucherCode = await assignVoucher(selectedPlan.title);
+      const reference = `BAL_${Math.floor(Math.random() * 1000000) + 1}`;
+
+      // Create transaction and update balance in a batch
+      await writeBatch(db)
+        .set(doc(collection(db, 'transactions')), {
+          userId: currentUser.uid,
+          plan: selectedPlan.title,
+          amount: selectedPlan.price,
+          type: 'balance_payment',
+          status: 'completed',
+          paymentMethod: 'balance',
+          reference,
+          voucherCode,
+          timestamp: serverTimestamp()
+        })
+        .update(doc(db, 'users', currentUser.uid), {
+          balance: currentUser.balance - selectedPlan.price
+        })
+        .commit();
+
+      setVoucherCode(voucherCode);
+      toast.success('Payment successful! Your voucher code has been generated.');
+    } catch (error: any) {
+      setError(error.message);
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!selectedPlan) {
+    return null;
+  }
+
   return (
-    <Layout>
+    <DashboardLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
+          {/* Back Button */}
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
+          >
+            <HiArrowLeft className="w-5 h-5 mr-2" />
+            Back to Dashboard
+          </button>
+
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Send Payment</h2>
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3 mb-4">
+                  <TbCurrencyNaira className="text-blue-600 w-6 h-6" />
+                  <span>Complete Your Purchase</span>
+                </h2>
+                <p className="text-gray-600">Activate your selected data plan</p>
+              </div>
 
               {error && (
                 <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
@@ -114,88 +297,187 @@ const Payment = () => {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-6">
-                  <div>
-                    <label htmlFor="recipientId" className="block text-sm font-medium text-gray-700">
-                      Recipient ID
-                    </label>
-                    <input
-                      type="text"
-                      name="recipientId"
-                      id="recipientId"
-                      required
-                      value={formData.recipientId}
-                      onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Enter recipient's user ID"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                      Amount
-                    </label>
-                    <div className="mt-1 relative rounded-md shadow-sm">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 sm:text-sm">$</span>
-                      </div>
-                      <input
-                        type="number"
-                        name="amount"
-                        id="amount"
-                        required
-                        min="0.01"
-                        step="0.01"
-                        value={formData.amount}
-                        onChange={handleChange}
-                        className="block w-full pl-7 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <p className="mt-2 text-sm text-gray-500">
-                      Available balance: ${currentUser?.balance.toFixed(2)}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label htmlFor="note" className="block text-sm font-medium text-gray-700">
-                      Note (Optional)
-                    </label>
-                    <textarea
-                      name="note"
-                      id="note"
-                      rows={3}
-                      value={formData.note}
-                      onChange={handleChange}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                      placeholder="Add a note to your payment"
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-3">
+              {voucherCode ? (
+                <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+                  <h3 className="text-lg font-semibold text-green-800 mb-4">Payment Successful!</h3>
+                  <p className="text-gray-700 mb-2">Your voucher code is:</p>
+                  <div className="bg-white p-4 rounded-lg border border-green-300 flex justify-between items-center">
+                    <code className="text-lg font-mono font-bold text-green-700">{voucherCode}</code>
                     <button
-                      type="button"
-                      onClick={() => navigate('/dashboard')}
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      onClick={() => {
+                        navigator.clipboard.writeText(voucherCode);
+                        toast.success('Voucher code copied to clipboard!');
+                      }}
+                      className="text-blue-600 hover:text-blue-800"
                     >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      {loading ? 'Processing...' : 'Send Payment'}
+                      Copy
                     </button>
                   </div>
+                  <p className="mt-4 text-sm text-gray-600">
+                    Use the voucher code to connect on the wifi network "CT SPARK" at your location .
+                  </p>
+                  <button
+                    onClick={() => navigate('/dashboard')}
+                    className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Return to Dashboard
+                  </button>
                 </div>
-              </form>
+              ) : (
+                <>
+                  <div className="selected-plan bg-blue-50 p-4 rounded-lg mb-6">
+                    <h3 className="font-semibold text-lg mb-2">Selected Plan</h3>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-gray-700">{selectedPlan.title}</p>
+                        <p className="text-sm text-gray-500">{selectedPlan.validity} Validity</p>
+                      </div>
+                      <p className="text-xl font-bold text-blue-600">
+                        ₦{selectedPlan.price.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-lg mb-4">Select Payment Method</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => setPaymentMethod('paystack')}
+                        className={`p-4 rounded-lg border-2 transition-colors ${
+                          paymentMethod === 'paystack'
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <HiCreditCard className="w-6 h-6 text-blue-600" />
+                          <div className="text-left">
+                            <p className="font-medium">Pay Now</p>
+                            <p className="text-sm text-gray-500">Paystack Checkout</p>
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod('balance')}
+                        className={`p-4 rounded-lg border-2 transition-colors ${
+                          paymentMethod === 'balance'
+                            ? 'border-blue-600 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <TbCurrencyNaira className="w-6 h-6 text-blue-600" />
+                          <div className="text-left">
+                            <p className="font-medium">Pay with Balance</p>
+                            <p className="text-sm text-gray-500">
+                              Available: ₦{currentUser?.balance?.toFixed(2) || '0.00'}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {paymentMethod === 'paystack' && (
+                    <form onSubmit={handlePaystackPayment} className="space-y-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
+                            Full Name
+                          </label>
+                          <input
+                            type="text"
+                            name="fullName"
+                            id="fullName"
+                            required
+                            value={formData.fullName}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your full name"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                            Email Address
+                          </label>
+                          <input
+                            type="email"
+                            name="email"
+                            id="email"
+                            required
+                            value={formData.email}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your email"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                            Phone Number
+                          </label>
+                          <input
+                            type="tel"
+                            name="phoneNumber"
+                            id="phoneNumber"
+                            required
+                            value={formData.phoneNumber}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter your phone number"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? (
+                          <>
+                            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                            <span>Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <HiLockClosed className="w-5 h-5" />
+                            <span>Pay Now</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+
+                  {paymentMethod === 'balance' && (
+                    <form onSubmit={handleBalancePayment}>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? (
+                          <>
+                            <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
+                            <span>Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <TbCurrencyNaira className="w-5 h-5" />
+                            <span>Pay with Balance</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </Layout>
+    </DashboardLayout>
   );
 };
 

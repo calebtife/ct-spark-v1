@@ -13,14 +13,17 @@ export interface Transaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'deposit' | 'withdrawal';
+  type: 'deposit' | 'direct_payment' | 'balance_payment';
   status: 'pending' | 'completed' | 'failed';
   paymentMethod?: 'cash' | 'card';
   locationId?: string;
   note?: string;
-  createdAt: string;
+  timestamp: any; // Firestore Timestamp
   recipientId?: string;
   senderId?: string;
+  reference?: string;
+  plan?: string;
+  voucherCode?: string;
 }
 
 export interface Location {
@@ -34,7 +37,8 @@ export interface Location {
   email: string;
   managerId?: string;
   isActive: boolean;
-  createdAt: string;
+  createdAt: any;
+  updatedAt: any;
 }
 
 export interface SupportTicket {

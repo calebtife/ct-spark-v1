@@ -3,9 +3,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import Layout from '../components/Layout';
+import AdminDashboardLayout from '../components/AdminDashboardLayout';
 import type { AdminStats, Transaction, Location, User as IndexUser } from '../types';
 import type { User as AuthUser } from '../types/auth';
+import StatsOverview from '../components/admin/StatsOverview';
+
 
 const isSuperAdmin = (user: AuthUser): boolean => {
   return user.isAdmin === true && user.isSuperAdmin === true;
@@ -115,247 +117,38 @@ const AdminDashboard = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
   return (
-    <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Admin Dashboard</h2>
-              {currentUser && isSuperAdmin(currentUser) && (
-                <select
-                  value={selectedLocation || ''}
-                  onChange={(e) => setSelectedLocation(e.target.value || null)}
-                  className="block w-64 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                >
-                  <option value="">All Locations</option>
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {error && (
-              <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
-                {error}
-              </div>
-            )}
-
-            {loading ? (
-              <div className="text-center py-4">Loading dashboard data...</div>
-            ) : stats ? (
-              <div className="space-y-6">
-                {/* Stats Overview */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Users
-                      </dt>
-                      <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        {stats.totalUsers}
-                      </dd>
-                    </div>
-                  </div>
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Transactions
-                      </dt>
-                      <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        {stats.totalTransactions}
-                      </dd>
-                    </div>
-                  </div>
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Locations
-                      </dt>
-                      <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        {stats.totalLocations}
-                      </dd>
-                    </div>
-                  </div>
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Revenue
-                      </dt>
-                      <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        {formatCurrency(stats.totalRevenue)}
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Location Stats (Super Admin only) */}
-                {currentUser && isSuperAdmin(currentUser) && stats.locationStats.length > 0 && (
-                  <div className="bg-white shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">
-                        Location Statistics
-                      </h3>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Location
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Transactions
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Revenue
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {stats.locationStats.map((stat) => (
-                              <tr key={stat.locationId}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {stat.locationName}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {stat.totalTransactions}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {formatCurrency(stat.totalRevenue)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Recent Transactions */}
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Recent Transactions
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Date
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Type
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Amount
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Status
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {stats.recentTransactions.map((transaction) => (
-                            <tr key={transaction.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {new Date(transaction.createdAt).toLocaleDateString()}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {transaction.type}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <span className={transaction.type === 'deposit' ? 'text-green-600' : 'text-red-600'}>
-                                  {transaction.type === 'deposit' ? '+' : '-'}
-                                  {formatCurrency(Math.abs(transaction.amount))}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  transaction.status === 'completed'
-                                    ? 'bg-green-100 text-green-800'
-                                    : transaction.status === 'pending'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {transaction.status}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Users */}
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-4 py-5 sm:p-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Recent Users
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Username
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Email
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Balance
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Joined
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {stats.recentUsers.map((user) => (
-                            <tr key={user.uid}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {user.username}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {user.email}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {formatCurrency(user.balance)}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {new Date(user.createdAt).toLocaleDateString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-4 text-gray-500">
-                No data available
-              </div>
-            )}
+    <AdminDashboardLayout>
+      <div className="space-y-6">
+        {/* Location Selector */}
+        {currentUser && isSuperAdmin(currentUser) && (
+          <div className="bg-white p-4 rounded-lg shadow">
+            <select
+              value={selectedLocation || ''}
+              onChange={(e) => setSelectedLocation(e.target.value || null)}
+              className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            >
+              <option value="">All Locations</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-4 bg-red-100 text-red-700 rounded-md">
+            {error}
+          </div>
+        )}
+
+        {/* Stats Overview */}
+        <StatsOverview stats={stats} loading={loading} />
       </div>
-    </Layout>
+    </AdminDashboardLayout>
   );
 };
 

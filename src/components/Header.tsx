@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import type { User } from '../types/auth';
+import { MdAccountCircle } from "react-icons/md";
 
 interface NavItem {
   label: string;
@@ -14,6 +17,8 @@ interface HeaderProps {
   navItems: NavItem[];
   signInLink: string;
   getStartedLink: string;
+  currentUser: User | null;
+  onLogout: () => Promise<void>;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -23,6 +28,8 @@ const Header: React.FC<HeaderProps> = ({
   navItems,
   signInLink,
   getStartedLink,
+  currentUser,
+  onLogout,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -62,18 +69,37 @@ const Header: React.FC<HeaderProps> = ({
             ))}
           </ul>
 
-          {/* Sign In / Get Started Section */}
+          {/* Auth Section */}
           <div className="flex gap-5 mt-auto items-center">
-            <Link to={signInLink} className="text-lg hover:text-blue-500" onClick={toggleMenu}>
-              Sign In
-            </Link>
-            <Link
-              to={getStartedLink}
-              className="px-5 py-3 bg-[#060640] rounded-full text-white hover:bg-blue-700 transition-colors"
-              onClick={toggleMenu}
-            >
-              Get Started
-            </Link>
+            {currentUser ? (
+              <>
+                <Link to="/dashboard" className="text-lg hover:text-blue-500" onClick={toggleMenu}>
+                  {currentUser.username}
+                </Link>
+                <button
+                  onClick={() => {
+                    onLogout();
+                    toggleMenu();
+                  }}
+                  className="px-5 py-3 bg-red-600 rounded-full text-white hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to={signInLink} className="text-lg hover:text-blue-500" onClick={toggleMenu}>
+                  Sign In
+                </Link>
+                <Link
+                  to={getStartedLink}
+                  className="px-5 py-3 bg-[#060640] rounded-full text-white hover:bg-blue-700 transition-colors"
+                  onClick={toggleMenu}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -100,9 +126,7 @@ const Header: React.FC<HeaderProps> = ({
                 <NavLink
                   to={item.href}
                   className={({ isActive }) =>
-                    `relative pb-1 text-gray-500 hover:text-blue-500 nav-link ${
-                      isActive ? 'text-blue-500' : ''
-                    }`
+                    `relative pb-1 nav-link ${isActive ? 'active' : ''}`
                   }
                 >
                   {item.label}
@@ -113,15 +137,31 @@ const Header: React.FC<HeaderProps> = ({
 
           {/* Desktop Auth Buttons */}
           <div className="hidden sm:flex gap-5 items-center text-md">
-            <Link to={signInLink} className="hover:text-blue-500 transition-colors">
-              Sign In
-            </Link>
-            <Link
-              to={getStartedLink}
-              className="px-5 py-3 bg-[#060640] rounded-full text-white hover:bg-blue-700 transition-colors"
-            >
-              Get Started
-            </Link>
+            {currentUser ? (
+              <>
+                <Link to="/dashboard" className="hover:text-blue-500 text-xl transition-colors flex items-center">
+                <MdAccountCircle className='mr-1' />{currentUser.username}
+                </Link>
+                <button
+                  onClick={onLogout}
+                  className="px-5 py-3 bg-red-600 rounded-full text-white hover:bg-red-700 transition-colors"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to={signInLink} className="hover:text-blue-500 transition-colors">
+                  Sign In
+                </Link>
+                <Link
+                  to={getStartedLink}
+                  className="px-5 py-3 bg-[#060640] rounded-full text-white hover:bg-blue-700 transition-colors"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}

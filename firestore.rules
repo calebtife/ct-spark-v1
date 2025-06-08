@@ -1,0 +1,80 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserLocation() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.locationId;
+    }
+
+    // Locations collection rules
+    match /locations/{locationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+
+      match /notifications/{notificationId} {
+        allow read, write: if isAuthenticated() && isOwner(userId);
+      }
+    }
+
+    // Transactions collection rules
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Voucher Plans collection
+    match /voucherPlans/{planId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Vouchers collection rules
+    match /vouchers/{planName} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      
+      match /{voucherNum}/{voucherId} {
+        allow read: if isAuthenticated();
+        allow create: if isAdmin();
+        allow update: if isAdmin() || (
+          isAuthenticated() &&
+          request.resource.data.assignedTo == request.auth.uid &&
+          (
+            getUserLocation() == resource.data.locationId || 
+            !resource.data.locationId
+          )
+        );
+        allow delete: if isAdmin();
+      }
+    }
+  }
+} 
