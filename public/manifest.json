@@ -1,0 +1,27 @@
+{
+  "name": "CT SPARK",
+  "short_name": "CT SPARK",
+  "description": "High-speed internet plans for your home and business",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060640",
+  "theme_color": "#F7E16C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/CT-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/CT-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}

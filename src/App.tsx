@@ -10,6 +10,7 @@ import Home from './pages/Home';
 
 // Lazy load components for better performance
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
+const EnhancedDashboardPage = lazy(() => import('./pages/EnhancedDashboard'));
 const LoginPage = lazy(() => import('./pages/Login'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword'));
 const UserManagementPage = lazy(() => import('./pages/UserManagement'));
@@ -18,11 +19,11 @@ const SettingsPage = lazy(() => import('./pages/Settings'));
 const ContactUsPage = lazy(() => import('./pages/ContactUs'));
 const HistoryPage = lazy(() => import('./pages/History'));
 const DepositPage = lazy(() => import('./pages/Deposit'));
+const EnhancedDepositPage = lazy(() => import('./pages/EnhancedDeposit'));
 const LocationsPage = lazy(() => import('./pages/Locations'));
 const AdminDashboardPage = lazy(() => import('./pages/AdminDashboard'));
 const PlansPage = lazy(() => import('./pages/PlansPage'));
 const AboutPage = lazy(() => import('./pages/About'));
-
 
 const App: React.FC = () => {
   return (
@@ -38,11 +39,10 @@ const App: React.FC = () => {
             <Route path="/plans" element={<PlansPage />} />
             <Route path="/contact-us" element={<ContactUsPage />} />
 
-            
             {/* Protected Routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <DashboardPage />
+                <EnhancedDashboardPage />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
@@ -65,7 +65,6 @@ const App: React.FC = () => {
                 <SettingsPage />
               </ProtectedRoute>
             } />
-            
             <Route path="/history" element={
               <ProtectedRoute>
                 <HistoryPage />
@@ -73,7 +72,7 @@ const App: React.FC = () => {
             } />
             <Route path="/deposit" element={
               <ProtectedRoute>
-                <DepositPage />
+                <EnhancedDepositPage />
               </ProtectedRoute>
             } />
             <Route path="/locations" element={
